@@ -1,35 +1,97 @@
-import * as React from 'react';
-import { useRpcSession, useAsync, mapRpcError, EditorContext } from '@leanprover/infoview';
+import * as React from "react";
+import {
+  useRpcSession,
+  useAsync,
+  mapRpcError,
+  EditorContext,
+} from "@leanprover/infoview";
 
 const e = React.createElement;
 
-function TodosList({ todos }) {
-  const editorCtx = React.useContext(EditorContext);
-  return e('ul', null, todos.map((item, index) => {
-    const jumpToSource = item.source && editorCtx
-      ? () => editorCtx.api.showDocument({
-          uri: 'file://' + item.source.fileName,
-          selection: {
-            start: { line: item.source.startPos.line - 1, character: item.source.startPos.column },
-            end:   { line: item.source.endPos.line - 1, character: item.source.endPos.column }
-          }
-        })
-      : null;
-    return e('li', { key: index },
-      e('input', { type: 'checkbox', checked: item.done, readOnly: true }),
-      ' ',
-      jumpToSource
-        ? e('span', { onClick: jumpToSource, style: { cursor: 'pointer', textDecoration: 'underline' } }, item.name)
-        : item.name
-    );
-  }));
+function jumpToSource(editorCtx, source) {
+  editorCtx.api.showDocument({
+    uri: "file://" + source.fileName,
+    selection: {
+      start: {
+        line: source.startPos.line - 1,
+        character: source.startPos.column,
+      },
+      end: { line: source.endPos.line - 1, character: source.endPos.column },
+    },
+  });
 }
 
-export default function(props) {
-  const rs = useRpcSession();
-  const st = useAsync(() => rs.call('getTodosRpc', {}), []);
+function toggleItem(editorCtx, item) {
+  const uri = "file://" + item.source.fileName;
+  editorCtx.api.applyEdit({
+    changes: {
+      [uri]: [
+        {
+          range: {
+            start: {
+              line: item.source.startPos.line - 1,
+              character: item.source.startPos.column,
+            },
+            end: {
+              line: item.source.startPos.line - 1,
+              character: item.source.startPos.column + 4,
+            },
+          },
+          newText: item.done ? "[_] " : "[x] ",
+        },
+      ],
+    },
+  });
+}
 
-  return st.state === 'resolved' ? st.value && e(TodosList, { todos: st.value })
-    : st.state === 'rejected' ? e('p', null, mapRpcError(st.error).message)
-    : e('p', null, 'Loading...');
+function TodoItem({ item }) {
+  const editorCtx = React.useContext(EditorContext);
+
+  if (!editorCtx || !item.source) {
+    return e(
+      "li",
+      null,
+      e("input", { type: "checkbox", checked: item.done, readOnly: true }),
+      " ",
+      item.name,
+    );
+  }
+
+  return e(
+    "li",
+    null,
+    e("input", {
+      type: "checkbox",
+      checked: item.done,
+      onClick: () => toggleItem(editorCtx, item),
+    }),
+    " ",
+    e(
+      "span",
+      {
+        onClick: () => jumpToSource(editorCtx, item.source),
+        style: { cursor: "pointer", fontWeight: "normal" },
+      },
+      item.name,
+    ),
+  );
+}
+
+function TodosList({ todos }) {
+  return e(
+    "ul",
+    null,
+    todos.map((item, index) => e(TodoItem, { key: index, item })),
+  );
+}
+
+export default function (props) {
+  const rs = useRpcSession();
+  const st = useAsync(() => rs.call("getTodosRpc", {}), []);
+
+  return st.state === "resolved"
+    ? st.value && e(TodosList, { todos: st.value })
+    : st.state === "rejected"
+      ? e("p", null, mapRpcError(st.error).message)
+      : e("p", null, "Loading...");
 }
