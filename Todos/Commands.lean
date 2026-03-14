@@ -3,19 +3,26 @@ import Todos.Basic
 
 open Lean Elab Command
 
-syntax (name := addUndoneTodoCmd) "[_] " str : command
+syntax (name := addTodoCmd) ("[_] " <|> "[x] ") str : command
 
-syntax (name := addDoneTodoCmd) "[x] " str : command
+def elabTodo (name : String) (done : Bool) : CommandElabM Unit := do
+  let fileName ← getFileName
+  let stx ← getRef
+  let fileMap ← getFileMap
+  let rawPosToSourcePos (rawPos : String.Pos.Raw) : SourcePos :=
+    let p := fileMap.toPosition rawPos
+    { line := p.line, column := p.column }
+  let source : Option SourceRange := do
+    pure $ {
+      fileName := fileName,
+      startPos := rawPosToSourcePos (← stx.getPos?),
+      endPos   := rawPosToSourcePos (← stx.getTailPos?)
+    }
+  addTodo ({ name, done, source })
 
 elab_rules : command
-  | `([_] $name) => do
-    let item := { name := name.getString, done := false }
-    todosRef.modify (fun items => items.push item)
-    logInfo s!"Added todo: {item.name}"
-  | `([x] $name) => do
-    let item := { name := name.getString, done := true }
-    todosRef.modify (fun items => items.push item)
-    logInfo s!"Added done todo: {item.name}"
+  | `([_] $name) => elabTodo name.getString (done := false)
+  | `([x] $name) => elabTodo name.getString (done := true)
 
 syntax (name := listTodosCmd) "list_todos" : command
 
@@ -25,19 +32,8 @@ elab_rules : command
     if todos.isEmpty then
       logInfo "No todos found."
     else
-      logInfo "Todo List:"
+      let mut msg := "Todo List:\n"
       for item in todos do
         let status := if item.done then "[x]" else "[_]"
-        logInfo s!"{status} {item.name}"
-      -- for (i, item) in todos.indexed do
-      --   let status := if item.done then "[x]" else "[_]"
-      --   logInfo s!"{i + 1}. {status} {item.name}"
-
-
-/-
-syntax (name := myCmd) "greet " str : command
-
-elab_rules : command
-  | `(greet $name) => do
-    logInfo s!"Hello, {name.getString}!"
--/
+        msg := msg ++ s!"\n{status} {item.name}"
+      logInfo msg
