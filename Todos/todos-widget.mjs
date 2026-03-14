@@ -21,9 +21,9 @@ function jumpToSource(editorCtx, source) {
   });
 }
 
-function toggleItem(editorCtx, item) {
+async function toggleItem(editorCtx, item) {
   const uri = "file://" + item.source.fileName;
-  editorCtx.api.applyEdit({
+  await editorCtx.api.applyEdit({
     changes: {
       [uri]: [
         {
@@ -44,7 +44,7 @@ function toggleItem(editorCtx, item) {
   });
 }
 
-function TodoItem({ item }) {
+function TodoItem({ item, onChange }) {
   const editorCtx = React.useContext(EditorContext);
 
   if (!editorCtx || !item.source) {
@@ -63,7 +63,10 @@ function TodoItem({ item }) {
     e("input", {
       type: "checkbox",
       checked: item.done,
-      onClick: () => toggleItem(editorCtx, item),
+      onClick: async () => {
+        await toggleItem(editorCtx, item);
+        onChange();
+      },
     }),
     " ",
     e(
@@ -77,20 +80,25 @@ function TodoItem({ item }) {
   );
 }
 
-function TodosList({ todos }) {
+function TodosList({ todos, onChange }) {
   return e(
     "ul",
     null,
-    todos.map((item, index) => e(TodoItem, { key: index, item })),
+    todos.map((item, index) => e(TodoItem, { key: index, item, onChange })),
   );
 }
 
 export default function (props) {
   const rs = useRpcSession();
-  const st = useAsync(() => rs.call("getTodosRpc", {}), []);
+  const [refreshIndex, setRefreshIndex] = React.useState(0);
+  const st = useAsync(() => rs.call("getTodosRpc", {}), [refreshIndex]);
+
+  const onChange = () => {
+    setRefreshIndex((i) => i + 1);
+  };
 
   return st.state === "resolved"
-    ? st.value && e(TodosList, { todos: st.value })
+    ? st.value && e(TodosList, { todos: st.value, onChange })
     : st.state === "rejected"
       ? e("p", null, mapRpcError(st.error).message)
       : e("p", null, "Loading...");
