@@ -1,0 +1,10 @@
+name = "todos"
+version = "0.1.0"
+defaultTargets = ["todos"]
+
+[[lean_lib]]
+name = "Todos"
+
+[[lean_exe]]
+name = "todos"
+root = "Main"
