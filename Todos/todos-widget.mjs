@@ -34,10 +34,10 @@ async function toggleItem(editorCtx, item) {
             },
             end: {
               line: item.source.startPos.line - 1,
-              character: item.source.startPos.column + 4,
+              character: item.source.startPos.column + 3,
             },
           },
-          newText: item.done ? "[_] " : "[x] ",
+          newText: item.done ? "[_]" : "[x]",
         },
       ],
     },
@@ -91,7 +91,10 @@ function TodosList({ todos, onChange }) {
 export default function (props) {
   const rs = useRpcSession();
   const [refreshIndex, setRefreshIndex] = React.useState(0);
-  const st = useAsync(() => rs.call("getTodosRpc", {}), [refreshIndex]);
+  const st = useAsync(
+    () => rs.call("getTodosRpc", { pos: props.pos }),
+    [props.pos, refreshIndex],
+  );
 
   const onChange = () => {
     setRefreshIndex((i) => i + 1);

@@ -1,5 +1,6 @@
 import Lean
-import Todos.Basic
+import Todos.Types
+import Todos.EnvExtension
 
 open Lean Elab Command
 
@@ -13,7 +14,7 @@ def elabTodo (name : String) (done : Bool) : CommandElabM Unit := do
     let p := fileMap.toPosition rawPos
     { line := p.line, column := p.column }
   let source : Option SourceRange := do
-    pure $ {
+    pure {
       fileName := fileName,
       startPos := rawPosToSourcePos (← stx.getPos?),
       endPos   := rawPosToSourcePos (← stx.getTailPos?)

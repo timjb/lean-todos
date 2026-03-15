@@ -18,14 +18,3 @@ structure TodoItem where
   done : Bool
   source : Option SourceRange := none
   deriving FromJson, ToJson
-
-initialize todosRef : IO.Ref (Array TodoItem) ← IO.mkRef #[]
-
-def addTodo (item : TodoItem) : IO Unit := do
-  todosRef.modify $ fun items =>
-    items
-      |>.filter (fun i => i.name != item.name)
-      |>.push item
-
-def getTodos : IO (Array TodoItem) := do
-  todosRef.get
