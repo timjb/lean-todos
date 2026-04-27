@@ -1,5 +1,7 @@
 # lean-todos
 
+[Screencast demonstrating lean-todos running in VS Code](https://github.com/user-attachments/assets/590cf504-7311-4d54-b11c-07e1b00df779)
+
 This is a toy project which demonstrates Lean's metaprogramming and editor integration features, in particular
 
 | Feature               | used for  |
